@@ -1,30 +1,33 @@
 import socket
 import threading
+import os
 
+PORT = int(os.environ.get("PORT", 9999))  # default to 9999 for local
 s = socket.socket()
-print("Socket has been created.")
-s.bind(("localhost",9999))
+s.bind(("0.0.0.0", PORT))
 s.listen(5)
-print("Connecting...")
 
-a = []
+print(f"Server running on port {PORT}...")
 
-def rsv(c,add):
-    a.append(c)
-    print(f"Connected...{add}\n")
+clients = []
+
+def rsv(c, addr):
+    clients.append(c)
+    print(f"Connected...{addr}")
     while True:
         try:
-            ab = c.recv(1024).decode()
-            if not ab:
-                print("Disconnected...\n")
+            msg = c.recv(1024).decode()
+            if not msg:
                 break
-            for m in a:
-                if m != c:
-                    m.send(ab.encode())
+            for client in clients:
+                if client != c:
+                    client.send(msg.encode())
         except Exception as e:
-            print(f"{e}\n")
-    a.remove(c)
+            print(e)
+            break
+    clients.remove(c)
     c.close()
+
 while True:
-    cc, addr = s.accept()
-    threading.Thread(target=rsv, args=(cc, addr), daemon=True).start()
+    conn, addr = s.accept()
+    threading.Thread(target=rsv, args=(conn, addr), daemon=True).start()
